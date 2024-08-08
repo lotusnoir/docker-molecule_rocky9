@@ -1,4 +1,5 @@
-# Docker Image with rocky9 base image 
+
+# Docker Image with rocky8 base image 
 
 This repo was created in order to test ansible roles with molecule.
 
@@ -8,4 +9,4 @@ This repo was created in order to test ansible roles with molecule.
 
 ## Use it from dockerhub
 
-    https://hub.docker.com/repository/docker/lotusnoir/ansible_molecule_test_images:rocky9
+    https://hub.docker.com/repository/docker/lotusnoir/ansible_molecule_test_images:rocky8

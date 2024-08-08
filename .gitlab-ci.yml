@@ -45,8 +45,8 @@ test_build:
     - docker:dind
   script:
     - docker build -t test-build-${OS_TYPE} .
-    - docker stop test-${OS_TYPE} && docker rm test-${OS_TYPE}
-    - docker run -d --name=test-${OS_TYPE} --privileged --volume=/sys/fs/cgroup:/sys/fs/cgroup:ro test-build-${OS_TYPE}
+    - docker stop test-${OS_TYPE} || true && docker rm test-${OS_TYPE} || true
+    - docker run -d --name=test-${OS_TYPE} --cgroupns=host --volume=/sys/fs/cgroup:/sys/fs/cgroup:rw test-build-${OS_TYPE}
     - docker exec test-${OS_TYPE} systemctl --version
     - docker stop test-${OS_TYPE} && docker rm test-${OS_TYPE}
 
