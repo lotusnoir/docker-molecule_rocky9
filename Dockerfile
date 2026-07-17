@@ -1,4 +1,4 @@
-FROM rockylinux/rockylinux:9
+FROM rockylinux/rockylinux:9.8
 LABEL maintainer="lotusnoir"
 
 ENV container=docker
