@@ -1,6 +1,5 @@
 ---
 stages:
-  - check
   - test
   - push
 
@@ -12,27 +11,8 @@ variables:
   DOCKERHUB_TAG: ${DOCKERHUB_USER}/ansible_molecule_test_images:${OS_TYPE}
   DOCKERHUB_USER: lotusnoir
   GITHUB_USER: lotusnoir
-
-
-##################################################
-# CHECKS
-##################################################
-yamllint:
-  stage: check
-  image: sdesbure/yamllint
-  before_script:
-    - yamllint --version
-  script:
-    - yamllint .
-
-hadolint:
-  stage: check
-  image: hadolint/hadolint:latest-debian
-  before_script:
-    - hadolint --version
-  script:
-    - hadolint Dockerfile
-
+  DOCKER_HOST: unix:///var/run/docker.sock
+  DOCKER_TLS_CERTDIR: "" # Disable TLS for simplicity
 
 ##################################################
 # TEST BUILD
@@ -40,16 +20,17 @@ hadolint:
 test_build:
   stage: test
   image: docker:latest
-  needs: ["yamllint", "hadolint"]
-  services:
-    - docker:dind
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - Dockerfile
   script:
+    - until docker info 2>/dev/null; do echo "Waiting for Docker..."; sleep 2; done
     - docker build -t test-build-${OS_TYPE} .
     - docker stop test-${OS_TYPE} || true && docker rm test-${OS_TYPE} || true
     - docker run -d --name=test-${OS_TYPE} --cgroupns=host --volume=/sys/fs/cgroup:/sys/fs/cgroup:rw test-build-${OS_TYPE}
     - docker exec test-${OS_TYPE} systemctl --version
     - docker stop test-${OS_TYPE} && docker rm test-${OS_TYPE}
-
 
 ##################################################
 # PUSH CODE AND IMAGE
@@ -58,8 +39,6 @@ test_build:
 #  stage: push
 #  image: docker:latest
 #  needs: ["test_build"]
-#  services:
-#    - docker:dind
 #  before_script:
 #    - docker info
 #    - echo "${CI_REGISTRY_USER} ${CI_REGISTRY_TOKEN} ${CI_REGISTRY_URL}.${COMPANY_DOMAIN}"
@@ -72,10 +51,12 @@ push_img_on_dockerhub:
   stage: push
   image: docker:latest
   needs: ["test_build"]
-  services:
-    - docker:dind
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - Dockerfile
   before_script:
-    - docker info
+    - until docker info 2>/dev/null; do echo "Waiting for Docker..."; sleep 2; done
     - docker login -u "${DOCKERHUB_USER}" -p "${DOCKERHUB_TOKEN}"
   script:
     - docker build -t "${DOCKERHUB_TAG}" .
@@ -85,6 +66,10 @@ push_src_on_github:
   stage: push
   image: alpine:latest
   needs: ["test_build"]
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      changes:
+        - Dockerfile
   before_script:
     - apk add git openssh-client
     - eval $(ssh-agent -s)
